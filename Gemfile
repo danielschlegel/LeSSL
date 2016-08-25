@@ -15,5 +15,4 @@ gemspec
 
 group :development, :test do
   gem 'ffaker'
-  gem 'ffaker'
 end
