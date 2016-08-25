@@ -14,7 +14,7 @@ module LeSSL
       raise LeSSL::NoContactEmailError if email.nil?
       raise LeSSL::TermsNotAcceptedError unless options[:agree_terms] == true
 
-      self.private_key = options[:private_key].presence
+      self.private_key = options[:private_key] ? options[:private_key] : nil
 
       private_key      # Check private key
 
@@ -84,8 +84,8 @@ module LeSSL
       else
         challenge = authorization.http01
 
-        file_name = Rails.root.join(web_root, challenge.filename)
-        dir = File.dirname(Rails.root.join(web_root, challenge.filename))
+        file_name = File.join(web_root, challenge.filename)
+        dir = File.dirname(File.join(web_root, challenge.filename))
 
         FileUtils.mkdir_p(dir)
 
