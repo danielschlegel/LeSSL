@@ -16,7 +16,7 @@ module LeSSL
 
       self.private_key = options[:private_key].presence
 
-      private_key # Check private key
+      private_key      # Check private key
 
       register(email) unless options[:skip_register] == true
     end
@@ -26,9 +26,9 @@ module LeSSL
     #
     # Challenge options:
     #  - HTTP (default and recommended)
-    #  - DNS (requires manual verification)
+    #  - DNS
     def authorize_for_domain(domain, options={})
-      authorization = client.authorize(domain: domain,)
+      authorization = client.authorize(domain: domain)
       web_root = options[:web_root] || Rails.root.join('public')
 
       # Default challenge is via HTTP
@@ -41,7 +41,7 @@ module LeSSL
           puts "===================================================================="
           puts "Record:"
           puts
-          puts " - Name: #{challenge.record_name}"
+          puts " - Name: #{challenge.record_name}.#{domain}"
           puts " - Type: #{challenge.record_type}"
           puts " - Value: #{challenge.record_content}"
           puts
@@ -49,19 +49,48 @@ module LeSSL
           puts "===================================================================="
         end
 
-        return challenge
+        # With this option the dns verification is
+        # done automatically. LeSSL waits until a
+        # valid record on your DNS servers was found
+        # and requests a verification.
+        #
+        # CAUTION! This is a blocking the thread!
+        if options[:automatic_verification]
+          dns = begin
+            if ns = options[:custom_nameservers]
+              LeSSL::DNS.new(ns)
+            else
+              LeSSL::DNS.new
+            end
+          end
+
+          puts
+          puts 'Wait until the TXT record was set...'
+
+          # Wait with verification until the
+          # challenge record is valid.
+          while dns.challenge_record_invalid?(domain, challenge.record_content)
+            puts 'DNS record not valid' if options[:verbose]
+
+            sleep(2) # Wait 2 seconds
+          end
+
+          puts 'Valid TXT record found. Continue with verification...'
+
+          return request_verification(challenge)
+        else
+          return challenge
+        end
       else
         challenge = authorization.http01
 
-        file_name = File.join(web_root, challenge.filename)
-        dir = File.dirname(file_name)
+        file_name = Rails.root.join(web_root, challenge.filename)
+        dir = File.dirname(Rails.root.join(web_root, challenge.filename))
 
         FileUtils.mkdir_p(dir)
 
         File.write(file_name, challenge.file_content)
-
-        request_verification(challenge) == 'invalid'
-
+        
         return challenge.verify_status
       end
     end
@@ -99,21 +128,23 @@ module LeSSL
     private
 
     def private_key=(key)
-      if key.is_a?(OpenSSL::PKey::RSA)
-        @private_key = key
-      elsif key.is_a?(String)
-        @private_key = OpenSSL::PKey::RSA.new(key)
-      elsif key.nil?
-        nil # Return silently
-      else
-        raise LeSSL::PrivateKeyInvalidFormat
+      @private_key = begin
+        if key.is_a?(OpenSSL::PKey::RSA)
+          key
+        elsif key.is_a?(String)
+          OpenSSL::PKey::RSA.new(key)
+        elsif key.nil?
+          nil
+        else
+          raise LeSSL::PrivateKeyInvalidFormat
+        end
       end
     end
 
     def private_key
       self.private_key = private_key_string_from_env if @private_key.nil?
       raise(LeSSL::NoPrivateKeyError, "No private key for certificate account found") if @private_key.nil?
-
+      
       @private_key
     end
 

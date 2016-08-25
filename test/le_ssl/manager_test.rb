@@ -1,13 +1,8 @@
-require_relative '../test_helper'
+require 'test_helper'
 
 class LeSSL::ManagerTest < ActiveSupport::TestCase
-  def private_key;
-    @private_key ||= OpenSSL::PKey::RSA.new(2048);
-  end
-
-  def manager(skip_register=true)
-    ; @manager ||= LeSSL::Manager.new(skip_register: skip_register, email: FFaker::Internet.free_email, private_key: private_key, agree_terms: true);
-  end
+  def private_key; @private_key ||= OpenSSL::PKey::RSA.new(2048); end
+  def manager(skip_register=true); @manager ||= LeSSL::Manager.new(skip_register: skip_register, email: FFaker::Internet.free_email, private_key: private_key, agree_terms: true); end
 
   test 'valid initialization (without registering)' do
     assert_nothing_raised do
@@ -21,7 +16,7 @@ class LeSSL::ManagerTest < ActiveSupport::TestCase
     ENV['LESSL_CONTACT_EMAIL'] = FFaker::Internet.email
     ENV['LESSL_CLIENT_PRIVATE_KEY'] = private_key.to_s
 
-    m = nil # Scope
+    m = nil    # Scope
 
     assert_nothing_raised do
       m = LeSSL::Manager.new(skip_register: true, agree_terms: true)
@@ -32,26 +27,6 @@ class LeSSL::ManagerTest < ActiveSupport::TestCase
     # Global variables!
     ENV.delete('LESSL_CONTACT_EMAIL')
     ENV.delete('LESSL_CLIENT_PRIVATE_KEY')
-  end
-
-  test 'valid initialization with endpoint: "production"' do
-    m = nil # Scope
-
-    assert_nothing_raised do
-      m = LeSSL::Manager.new(skip_register: true, private_key: private_key, email: FFaker::Internet.email, agree_terms: true, endpoint: 'production')
-    end
-
-    assert_equal_private_keys LeSSL::Manager::PRODUCTION_ENDPOINT, m.instance_variable_get(:@endpoint)
-  end
-
-  test 'valid initialization with endpoint: "other than production"' do
-    m = nil # Scope
-
-    assert_nothing_raised do
-      m = LeSSL::Manager.new(skip_register: true, private_key: private_key, email: FFaker::Internet.email, agree_terms: true, endpoint: 'other than production')
-    end
-
-    assert_equal_private_keys LeSSL::Manager::DEVELOPMENT_ENDPOINT, m.instance_variable_get(:@endpoint)
   end
 
   test 'invalid initialization without email' do
@@ -91,7 +66,7 @@ class LeSSL::ManagerTest < ActiveSupport::TestCase
     end
 
     assert_match "DEPRECATION WARNING! Use LESSL_CLIENT_PRIVATE_KEY instead of CERT_ACCOUNT_PRIVATE_KEY for environment variable!", err
-
+    
     assert_not_nil pk
     assert_equal ENV['CERT_ACCOUNT_PRIVATE_KEY'], pk
     ENV.delete('CERT_ACCOUNT_PRIVATE_KEY')

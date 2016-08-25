@@ -14,9 +14,6 @@ gemspec
 # gem 'byebug', group: [:development, :test]
 
 group :development, :test do
-	gem 'rb-fsevent'
-	gem 'growl'
-	gem 'guard'
-	gem 'guard-minitest'
-	gem 'ffaker'
+  gem 'ffaker'
+  gem 'ffaker'
 end
